@@ -1,0 +1,217 @@
+!!!
+html(lang="en", ng-app="pushApp")
+  head
+    title Android Push Service
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    meta(name="fragment", content="!")
+
+    link(rel="stylesheet", href="../vendors/css/bootstrap.min.css")
+    link(rel="stylesheet", href="static/css/style.css")
+
+  body
+    .row
+      .col-lg-12.col-md-12.col-sm-12.col-sx-12.col-offest-0
+        ul.nav.nav-pills.nav-justified(ng-controller="menuController")
+          li(ng-class="getClass('')"): a(href="#!/") Clients
+          li(ng-class="getClass('/tokens')"): a(ng-show="client_id", href="#!/tokens/{{client_id}}") Tokens
+          li(ng-class="getClass('/tags')"): a(ng-show="client_id", href="#!/tags/{{client_id}}") Tags
+          li(ng-class="getClass('/pushes')"): a(ng-show="client_id", href="#!/pushes/{{client_id}}") Pushes
+
+    .row
+      .col-lg-12.col-md-12.col-sm-12.col-sx-12.col-offest-0
+        .ng-view
+
+    script(id="clients.html", type="text/ng-template")
+      h1 Clients
+        .btn.btn-primary(ng-click="newClient()") new
+        .client-name(ng-show="formClient")
+          input.input-large(ng-model="client.name")
+          input.input-large(ng-model="client.id", type="hidden")
+          .btn.btn-primary(ng-hide="client.id", ng-click="addClient()") add
+          .btn.btn-primary(ng-show="client.id", ng-click="saveClient(client.id)") save
+          .btn.btn-primary(ng-click="hideForm()") cancel
+      table.table
+        thead
+          th name
+          th auth
+          th tokens
+          th tags
+          th pushes
+        tbody.client(ng-repeat="client in clients")
+          td
+            .btn-group(ng-class="{'open': dropdown, '': !dropdown}")
+              button.btn.btn-primary.dropdown-toggle(ng-click="dropdown = !dropdown")
+                {{client.name}} 
+                span.caret
+              ul.dropdown-menu
+                li: a(ng-click="editClient(client.id); dropdown = false") edit
+                li.divider
+                li: a(ng-click="clearAuth(client.id); dropdown = false") clear auth
+                li.divider
+                li: a(ng-click="removeClient(client.id)") remove
+            .text-muted {{client.api_keys.gcm.key}}
+          td: .btn.btn-primary(ng-click="addAuth(client.id)") auth
+          td: a.btn.btn-primary(href="#!/tokens/{{client.id}}") tokens
+          td: a.btn.btn-primary(href="#!/tags/{{client.id}}") tags
+          td: a.btn.btn-primary(href="#!/pushes/{{client.id}}") pushes
+
+      .x-modal(ng-show="formAuthClient")
+        .modal-dialog
+          .modal-content
+            .modal-header
+              button.close(aria-hidden="true", ng-click="hideAuthForm()") &times;
+              h4 Auth {{authClient.name}}
+            .modal-body
+              input.form-control(ng-model="authClient.api_keys.gcm.key")
+            .modal-footer
+              button.btn.btn-default(ng-click="hideAuthForm()") Close 
+              button.btn.btn-primary(ng-click="updateAuthKey()") Update 
+
+    script(id="tokens.html", type="text/ng-template")
+      h1 Tokens {{client.name}}
+        .btn.btn-primary(ng-click="newToken()") new
+        .btn.btn-primary(ng-click="searchTokens()") search
+      .x-modal(ng-show="formToken")
+        .modal-dialog
+          .modal-content
+            .modal-header
+              button.close(aria-hidden="true", ng-click="hideTokenForm()") &times;
+              h4 Token
+            .modal-body
+              .form-group
+                label.control-label Tokens splited by new line (\n)
+                textarea.form-control(ng-model="token.ids")
+              .form-group
+                label.control-label Tags splited by comma (,)
+                textarea.form-control(ng-model="token.tags")
+            .modal-footer
+              button.btn.btn-default(ng-click="hideTokenForm()") Close 
+              button.btn.btn-primary(ng-click="updateTokens()", ng-show="tokenIndex != null") Update 
+              button.btn.btn-primary(ng-click="createTokens()", ng-show="tokenIndex == null") Create 
+      .x-modal(ng-show="formSearch")
+        .modal-dialog
+          .modal-content
+            .modal-header
+              button.close(aria-hidden="true", ng-click="hideSearchTokenForm()") &times;
+              h4 Search tokens
+            .modal-body
+              ng-include(src="'querytokens.html'")
+            .modal-footer
+              button.btn.btn-default(ng-click="hideSearchTokenForm()") Close 
+              button.btn.btn-primary(ng-click="findTokens()") Find
+
+      table.table
+        thead(ng-show="tokens.length")
+          th: | tags
+          th: | remove
+          th: | edit
+        tbody.client(ng-repeat="token in tokens")
+          td: {{token.id|truncate}} {{token.tags}}
+          td: .btn.btn-primary(ng-click="removeToken($index, token.id)") remove
+          td: .btn.btn-primary(ng-click="editToken($index, token.id)") edit
+
+    script(id="tags.html", type="text/ng-template")
+      h1 Tags {{client.name}}
+      .col-lg-12.col-md-12.col-sm-12.col-sx-12(ng-include, src="'querytokens.html'")
+      .col-lg-12.col-md-12.col-sm-12.col-sx-12
+        .form-group
+          label.control-label Add tags splited by comma (,)
+          .row
+            .col-lg-10.col-md-10.col-sm-10.col-sx-10
+              input.form-control(placeholder="add tags", ng-model="tags.add")
+            botton.btn.btn-primary.col-lg-2.col-md-2.col-sm-2.col-sx-2(ng-click="addTags()") add
+        .form-group
+          label.control-label Delete tags splited by comma (,)
+          .row
+            .col-lg-10.col-md-10.col-sm-10.col-sx-10
+              input.form-control(placeholder="delete tags", ng-model="tags.delete")
+            botton.btn.btn-primary.col-lg-2.col-md-2.col-sm-2.col-sx-2(ng-click="deleteTags()") delete
+        .form-group
+          label.control-label Replace one tag
+          .row
+            .col-lg-5.col-md-5.col-sm-5.col-sx-5
+              input.form-control(placeholder="old tag", ng-model="tags.old")
+            .col-lg-5.col-md-5.col-sm-5.col-sx-5
+              input.form-control(placeholder="new tag", ng-model="tags.new")
+            botton.btn.btn-primary.col-lg-2.col-md-2.col-sm-2.col-sx-2(ng-click="replaceTag()") replace
+
+    script(id="querytokens.html", type="text/ng-template")
+      .form-group
+        label.control-label Targets
+        .btn-group.btn-group-justified
+          label.btn.btn-primary(ng-click="switchTargetTokens()", ng-class="{'active': targetTokens, '': !targetTokens}") By tokens
+          label.btn.btn-primary(ng-click="switchTargetTags()", ng-class="{'active': targetTags, '': !targetTags}") By tags
+      .form-group(ng-show="targetTokens")
+        label.control-label Tokens splited by new line (\n)
+        textarea.form-control(ng-model="query.q.ids")
+      .form-group(ng-show="targetTags")
+        label.control-label And tags splited by comma (,)
+        textarea.form-control(ng-model="query.q.and")
+      .form-group(ng-show="targetTags")
+        label.control-label Or tags splited by comma (,)
+        textarea.form-control(ng-model="query.q.or")
+      .form-group(ng-show="targetTags")
+        label.control-label Not tags splited by comma (,)
+        textarea.form-control(ng-model="query.q.not")
+
+    script(id="pushes.html", type="text/ng-template")
+      h1 Pushes {{client.name}}
+        .btn.btn-primary(ng-click="newPush()") new
+      .x-modal(ng-show="formPush")
+        .modal-dialog
+          .modal-content
+            .modal-header
+              button.close(aria-hidden="true", ng-click="hidePushForm()") &times;
+              h4 Push
+            .modal-body
+              .form-group
+                label.control-label
+                  | Data 
+                  a(ng-click="addDataField()") add field
+                .row(ng-repeat="data in push.data")
+                  .col-lg-3.col-md-3.col-sm-3.col-sx-3
+                    input.form-control(placeholder="key", ng-model="data.key")
+                  .col-lg-8.col-md-8.col-sm-8.col-sx-8
+                    input.form-control(placeholder="value", ng-model="data.value")
+                  .col-lg-1.col-md-1.col-sm-1.col-sx-1
+                    botton.btn.btn-primary(ng-click="removeDataField($index)") &times;
+              ng-include(src="'querytokens.html'")
+              .form-group
+                label.control-label Delay While Idle
+                input(type="checkbox", ng-model="push.delay_while_idle", value="false")
+                span: {{push.delay_while_idle}}
+              .form-group
+                label.control-label Time to live (sec)
+                input.form-control(type="number", ng-model="push.ttl", placeholder="2419200")
+              .form-group
+                label.control-label Package name (optional)
+                input.form-control(ng-model="push.package_name")
+            .modal-footer
+              button.btn.btn-default(ng-click="hidePushForm()") Close
+              button.btn.btn-primary(ng-click="sendPush()") Send
+      table.table(ng-show="pushes != {}")
+        thead
+          th: | id
+          th: | count
+          th: | progress
+          th: | state
+          th: | type
+          th: | created
+          th: | update
+        tbody.client(ng-repeat="push in pushes")
+          td: {{push.id}}
+          td: {{push.progress}} / {{push.count}}
+          td
+            .progress
+              .progress-bar(ng-style="{width: pushPercent(push) + '%'}")
+          td: {{push.state}}
+          td: {{push.type}}
+          td: {{push.created}}
+          td: .btn.btn-primary(ng-click="updateStatus(push.id)")
+            span.glyphicon.glyphicon-refresh
+            |  status
+
+    script(src="../vendors/js/angular.min.js")
+    script(src="../vendors/js/angular-resource.min.js")
+    script(src="static/js/app-config.js")
+    script(src="static/js/app.js")
