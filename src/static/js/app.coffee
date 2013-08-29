@@ -218,9 +218,9 @@ pushApp.controller 'tokensController', ['$scope', '$rootScope', '$routeParams', 
 
   limit = appConfig.paging.limit
   Tokens = Api.bind first: clientId, second: 'ids'
-  tokens = Tokens.get limit:1000, ->
+  tokens = Tokens.getOne limit:1000, ->
     console.log 'tokens get', tokens
-    $scope.tokens = tokens
+    $scope.tokens = tokens.data
     return
 
   $scope.newToken = ->
@@ -246,9 +246,9 @@ pushApp.controller 'tokensController', ['$scope', '$rootScope', '$routeParams', 
     send = {}
     send.q = Utils.prepareQuery $scope.query.q
     Tokens = Api.bind first: clientId, second: 'ids', third: 'list'
-    Tokens.postArray send.q, (data) ->
+    Tokens.post send.q, (data) ->
       console.log 'send find', data
-      $scope.tokens = data
+      $scope.tokens = data.data
       $scope.query = {}
       $scope.hideSearchTokenForm()
     return
@@ -420,11 +420,13 @@ pushApp.controller 'pushesController', ['$scope', '$rootScope', '$routeParams', 
 
   limit = appConfig.paging.limit
   Pushes = Api.bind first: clientId, second: 'push'
-  _pushes = Pushes.get limit:1000, ->
-    pushes = {}
+  _pushes = Pushes.getOne limit:1000, ->
+    pushes = length:0
     console.log 'pushes', _pushes
-    for i of _pushes
-      pushes[_pushes[i].id] = _pushes[i]
+    for i of _pushes.data
+      pushes[_pushes.data[i].id] = _pushes.data[i]
+      pushes.length++
+    console.log 'pushes2', pushes
     $scope.pushes = pushes
     return
 
