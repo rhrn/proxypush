@@ -189,7 +189,8 @@ html(lang="en", ng-app="pushApp")
             .modal-footer
               button.btn.btn-default(ng-click="hidePushForm()") Close
               button.btn.btn-primary(ng-click="sendPush()") Send
-      table.table(ng-show="pushes != {}")
+
+      table.table(ng-hide="pushes.length == 0")
         thead
           th: | id
           th: | count
